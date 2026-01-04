@@ -37,6 +37,7 @@ namespace ImageViewer
 			InitializeComponent();
 			Loaded += OnLoaded;
 			fitToScreenWidth_ = fitToScreenWidth;
+			Topmost = true;
 
 			if (screenIndex < 0 || screenIndex >= Form.Screen.AllScreens.Length)
 			{
@@ -185,14 +186,11 @@ namespace ImageViewer
 		{
 			if (e.Key == Key.Escape)
 			{
-				if (Keyboard.Modifiers == ModifierKeys.Control)
+				if ((DateTime.Now - lastCloseTime_).TotalMilliseconds < 200)
 				{
 					Application.Current.Shutdown();
 					return;
 				}
-
-				if ((DateTime.Now - lastCloseTime_).TotalMilliseconds < 200)
-					return;
 				Close();
 				lastCloseTime_ = DateTime.Now;
 			}

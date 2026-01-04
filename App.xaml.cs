@@ -36,6 +36,7 @@ namespace ImageViewer
 				bool	fitToScreenWidth = false;
 				double	width = -1;
 				double	height = -1;
+				bool	topMost = false;
 				foreach (string token in arg.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					string[] kv = token.Trim().Split('=');
@@ -81,7 +82,7 @@ namespace ImageViewer
 							}
 							else
 							{
-								MessageBox.Show($"fit 인자는 true/false여야 합니다.\n인자:{arg}");
+								MessageBox.Show($"fit 인자는 true/false(1/0)여야 합니다.\n인자:{arg}");
 							}
 						}
 						break;
@@ -97,12 +98,25 @@ namespace ImageViewer
 							MessageBox.Show($"height 인자는 실수이고 1이상이어야 합니다.\n인자:{arg}");
 						}
 						break;
+					case "topmost":
+						if (!bool.TryParse(v, out topMost))
+						{
+							if (int. TryParse(v, out int topMostInt))
+							{
+								topMost = (topMostInt != 0);
+							}
+							else
+							{
+								MessageBox.Show($"topmost 인자는 true/false(1/0)여야 합니다.\n인자:{arg}");
+							}
+						}
+						break;
 					}
 				}
 
 				// ImageViewer.exe "path=C:\image.jpg screen=1 x=100 y=200 fit=true" "path=C:\image2.png screen=0 x=0 y=0 fit=false"
 
-				MainWindow mainWindow = new MainWindow(path, screenIdx, x, y, fitToScreenWidth, width, height);
+				MainWindow mainWindow = new MainWindow(path, screenIdx, x, y, fitToScreenWidth, width, height, topMost);
 				mainWindow.Show();
 			}
 		}

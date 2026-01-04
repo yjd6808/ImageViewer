@@ -28,18 +28,21 @@ namespace ImageViewer
 		private HwndSource hwndSource;
 		private Form.Screen Screen = null;
 		private BitmapImage Bitmap = null;
+		private string imagePath_ = string.Empty;
 		private double imageForceWidth = -1;
 		private double imageForceHeight = -1;
-
+		private int imageScreenIndex_ = 0;
 		private static DateTime lastCloseTime_ = DateTime.Now;
 		private bool fitToScreenWidth_ = false;
 
-		public MainWindow(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth, double width, double height)
+		public MainWindow(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth, double width, double height, bool topMost)
 		{
 			InitializeComponent();
 			Loaded += OnLoaded;
+			imagePath_ = imagePath;
 			fitToScreenWidth_ = fitToScreenWidth;
-			Topmost = true;
+			imageScreenIndex_ = screenIndex;
+			Topmost = topMost;
 
 			if (screenIndex < 0 || screenIndex >= Form.Screen.AllScreens.Length)
 			{
@@ -224,6 +227,75 @@ namespace ImageViewer
 				Close();
 				lastCloseTime_ = DateTime.Now;
 			}
+		}
+
+		private string GetClipboardCommandLineArg()
+		{
+			int screenIndex = -1;
+			for (int i = 0; i < Form.Screen.AllScreens.Length; i++)
+			{
+				var scr = Form.Screen.AllScreens[i];
+				if (scr.Bounds.Contains((int)Left, (int)Top))
+				{
+					screenIndex = i;
+					break;
+				}
+			}
+
+			if (screenIndex == -1)
+			{
+				screenIndex = imageScreenIndex_;
+			}
+
+			string arg =
+				$"\'" +
+				$"path={imagePath_}," +
+				$"screen={screenIndex}," +
+				$"x={(int)Left}," +
+				$"y={(int)Top}," +
+				$"width={(int)Width}," +
+				$"height={(int)Height}," +
+				$"fit={(fitToScreenWidth_ ? 1 : 0)}," +
+				$"topmost={(Topmost ? 1 : 0)}," +
+				$"\'";
+			return arg;
+		}
+
+
+		private void SaveArgClipboardSingle(object sender, RoutedEventArgs e)
+		{
+			string arg = GetClipboardCommandLineArg();
+			Clipboard.SetText(arg);
+			MessageBox.Show("클립보드에 내용이 복사되었습니다:\n" + arg);
+		}
+
+		private void SaveArgClipboardAll(object sender, RoutedEventArgs e)
+		{
+			StringBuilder sb = new StringBuilder();
+			bool isFirst = true;
+			foreach (var wnd in Application.Current.Windows)
+			{
+				if (wnd is MainWindow mw)
+				{
+					if (!isFirst)
+					{
+						sb.Append(",");
+						sb.AppendLine();
+					}
+
+					sb.Append(mw.GetClipboardCommandLineArg());
+					isFirst = false;
+				}
+			}
+			string args = sb.ToString();
+			Clipboard.SetText(args);
+			MessageBox.Show($"모든 창의 명령줄 인수가 클립보드에 복사되었습니다:\n{args}");
+		}
+
+		private void Go_Topmost(object sender, RoutedEventArgs e)
+		{
+			Topmost = !Topmost;
+
 		}
 	}
 

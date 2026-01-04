@@ -18,9 +18,14 @@
             CaptionHeight="0"
             ResizeBorderThickness="5" />
 	</WindowChrome.WindowChrome>
+	<Window.ContextMenu>
+		<ContextMenu>
+			<MenuItem Header="선택 이미지 클립보드 인자 복사" Click="SaveArgClipboardSingle"/>
+			<MenuItem Header="모든 이미지 클립보드 인자 복사" Click="SaveArgClipboardAll"/>
+			<MenuItem Header="상단 고정(토글)" Click="Go_Topmost"/>
+		</ContextMenu>
+	</Window.ContextMenu>
 	<Grid>
 		<Image x:Name="DisplayedImage" Stretch="Fill" />
-
-
 	</Grid>
 </Window>

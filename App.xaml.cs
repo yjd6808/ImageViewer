@@ -34,7 +34,9 @@ namespace ImageViewer
 				float 	x = 0;
 				float 	y = 0;
 				bool	fitToScreenWidth = false;
-				foreach (string token in arg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+				double	width = -1;
+				double	height = -1;
+				foreach (string token in arg.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					string[] kv = token.Trim().Split('=');
 					if (kv.Length < 2)
@@ -83,12 +85,24 @@ namespace ImageViewer
 							}
 						}
 						break;
+					case "width":
+						if (!double.TryParse(v, out width) && width < 1)
+						{
+							MessageBox.Show($"width 인자는 실수이고 1이상이어야 합니다.\n인자:{arg}");
+						}
+						break;
+					case "height":
+						if (!double.TryParse(v, out height) && height < 1)
+						{
+							MessageBox.Show($"height 인자는 실수이고 1이상이어야 합니다.\n인자:{arg}");
+						}
+						break;
 					}
 				}
 
 				// ImageViewer.exe "path=C:\image.jpg screen=1 x=100 y=200 fit=true" "path=C:\image2.png screen=0 x=0 y=0 fit=false"
 
-				MainWindow mainWindow = new MainWindow(path, screenIdx, x, y, fitToScreenWidth);
+				MainWindow mainWindow = new MainWindow(path, screenIdx, x, y, fitToScreenWidth, width, height);
 				mainWindow.Show();
 			}
 		}

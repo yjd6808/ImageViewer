@@ -19,7 +19,7 @@
             ResizeBorderThickness="5" />
 	</WindowChrome.WindowChrome>
 	<Grid>
-		<Image x:Name="DisplayedImage" Stretch="Uniform" />
+		<Image x:Name="DisplayedImage" Stretch="Fill" />
 
 
 	</Grid>

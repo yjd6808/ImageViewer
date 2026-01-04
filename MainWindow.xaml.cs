@@ -28,11 +28,13 @@ namespace ImageViewer
 		private HwndSource hwndSource;
 		private Form.Screen Screen = null;
 		private BitmapImage Bitmap = null;
+		private double imageForceWidth = -1;
+		private double imageForceHeight = -1;
 
 		private static DateTime lastCloseTime_ = DateTime.Now;
 		private bool fitToScreenWidth_ = false;
 
-		public MainWindow(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth = false)
+		public MainWindow(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth, double width, double height)
 		{
 			InitializeComponent();
 			Loaded += OnLoaded;
@@ -46,6 +48,9 @@ namespace ImageViewer
 				Application.Current.Shutdown();
 				return;
 			}
+
+			imageForceWidth = width;
+			imageForceHeight = height;
 
 			Screen = Form.Screen.AllScreens[screenIndex];
 			// 1. Screen 위치 적용
@@ -108,6 +113,31 @@ namespace ImageViewer
 		{
 			double width = (double)bmp.PixelWidth;
 			double height = (double)bmp.PixelHeight;
+
+			if (imageForceWidth >= 1 && imageForceHeight >= 1)
+			{
+				Width = Math.Max(1, imageForceWidth);
+				Height = Math.Max(1, imageForceHeight);
+				return;
+			}
+			else if (imageForceWidth >= 1)
+			{
+				double aspect = width / height;
+				width = imageForceWidth;
+				height = width / aspect;
+				Width = Math.Max(1, width);
+				Height = Math.Max(1, height);
+				return;
+			}
+			else if (imageForceHeight >= 1)
+			{
+				double aspect = width / height;
+				height = imageForceHeight;
+				width = height * aspect;
+				Width = Math.Max(1, width);
+				Height = Math.Max(1, height);
+				return;
+			}
 
 			if (fitToScreenWidth_)
 			{

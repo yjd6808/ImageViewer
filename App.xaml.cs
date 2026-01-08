@@ -14,6 +14,7 @@ namespace ImageViewer
 	/// </summary>
 	public partial class App : Application
 	{
+
 		protected override void OnStartup(StartupEventArgs _e)
 		{
 			base.OnStartup(_e);
@@ -21,10 +22,12 @@ namespace ImageViewer
 			string[] args = _e.Args;
 			if (args.Length == 0)
 			{
-				MessageBox.Show("인자가 전달되지 않았습니다.\n예: ImageViewer.exe \"path=C:\\image.jpg screen=1 x=100 y=200 fit=true\"");
-				Application.Current.Shutdown();
+				new MainWindow().Show();
 				return;
 			}
+
+			// 실행인자 테스트
+			// "path=E:\Script\a.png,screen=1,x=100,y=200,fit=true,height=600" "path=E:\Script\b.png,screen=1,x=200,y=200,fit=true" "path=E:\Script\b.png,screen=1,x=300,y=200,fit=true" "path=E:\Script\b.png,screen=1,x=400,y=200,fit=true"
 
 			for (int i = 0; i < args.Length; ++i)
 			{

@@ -23,9 +23,16 @@
 			<MenuItem Header="선택 이미지 클립보드 인자 복사" Click="SaveArgClipboardSingle"/>
 			<MenuItem Header="모든 이미지 클립보드 인자 복사" Click="SaveArgClipboardAll"/>
 			<MenuItem Header="상단 고정(토글)" Click="Go_Topmost"/>
+			<MenuItem Header="오토 리사이징" Click="Go_AutoResizing"/>
 		</ContextMenu>
 	</Window.ContextMenu>
-	<Grid>
+	<Grid AllowDrop="True"
+          Drop="DropImageFile"
+		  Background="LightGray">
+
+		<TextBlock FontSize="32" Text="이미지를 드래그 드랍 해주세요." VerticalAlignment="Center" HorizontalAlignment="Center">
+			
+		</TextBlock>
 		<Image x:Name="DisplayedImage" Stretch="Fill" />
 	</Grid>
 </Window>

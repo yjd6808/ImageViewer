@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using Form = System.Windows.Forms;
 
@@ -25,20 +26,38 @@ namespace ImageViewer
 	{
 		private const int WM_NCLBUTTONDOWN = 0xA1;
 		private const int HT_CAPTION = 2;
-		private HwndSource hwndSource;
-		private Form.Screen Screen = null;
-		private BitmapImage Bitmap = null;
+
+		private HwndSource hwndSounce_;
+		private Form.Screen screen_ = null;
+		private BitmapImage bitmap_ = null;
 		private string imagePath_ = string.Empty;
 		private double imageForceWidth = -1;
 		private double imageForceHeight = -1;
 		private int imageScreenIndex_ = 0;
 		private static DateTime lastCloseTime_ = DateTime.Now;
 		private bool fitToScreenWidth_ = false;
+		private bool adjustAutoResizing_ = true;
+
+		public bool IsImageLoaded => bitmap_ != null;
+		private bool isResizing_ = false;
+		private double resizeStartWidth_ = 0;
+		private double resizeStartHeight_ = 0;
+
+		public MainWindow()
+		{ 
+			InitializeComponent();
+			Loaded += OnLoaded;
+		}
 
 		public MainWindow(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth, double width, double height, bool topMost)
 		{
 			InitializeComponent();
 			Loaded += OnLoaded;
+			Load(imagePath, screenIndex, x, y, fitToScreenWidth, width, height, topMost);
+		}
+
+		void Load(string imagePath, int screenIndex, float x, float y, bool fitToScreenWidth, double width, double height, bool topMost)
+		{
 			imagePath_ = imagePath;
 			fitToScreenWidth_ = fitToScreenWidth;
 			imageScreenIndex_ = screenIndex;
@@ -55,7 +74,7 @@ namespace ImageViewer
 			imageForceWidth = width;
 			imageForceHeight = height;
 
-			Screen = Form.Screen.AllScreens[screenIndex];
+			screen_ = Form.Screen.AllScreens[screenIndex];
 			// 1. Screen 위치 적용
 			SetPositionOnScreen(x, y);
 
@@ -65,18 +84,75 @@ namespace ImageViewer
 
 		private void SetPositionOnScreen(float x, float y)
 		{
-			Left = Screen.Bounds.Left + x;
-			Top = Screen.Bounds.Top + y;
+			Left = screen_.Bounds.Left + x;
+			Top = screen_.Bounds.Top + y;
 		}
 
 		private void OnLoaded(object sender, RoutedEventArgs e)
 		{
-			hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-			hwndSource?.AddHook(WndProc);
+			hwndSounce_ = PresentationSource.FromVisual(this) as HwndSource;
+			hwndSounce_?.AddHook(WndProc);
 		}
 
 		private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
+			const int WM_ENTERSIZEMOVE = 0x0231;
+			const int WM_EXITSIZEMOVE = 0x0232;
+			const int WM_SIZING = 0x0214;
+
+			if (msg == WM_ENTERSIZEMOVE)
+			{
+				resizeStartWidth_ = Width;
+				resizeStartHeight_ = Height;
+				return IntPtr.Zero;
+			}
+			if (msg == WM_SIZING)
+			{
+				isResizing_ = true;
+				return IntPtr.Zero;
+			}
+			if (msg == WM_EXITSIZEMOVE)
+			{
+				if (isResizing_)
+				{
+					if (adjustAutoResizing_ && resizeStartWidth_ > 0 && resizeStartHeight_ > 0)
+					{
+						double widthRatio = 1.0;
+						double heightRatio = 1.0;
+
+						if (Width > resizeStartWidth_)
+							widthRatio = Width / resizeStartWidth_;
+						else
+						{
+							widthRatio = resizeStartWidth_ / Width;
+						}
+
+						if (Height > resizeStartHeight_)
+							heightRatio = Height / resizeStartHeight_;
+						else
+						{
+							heightRatio = resizeStartHeight_ / Height;
+						}
+
+						bool imageForceWidth = widthRatio > heightRatio; // 더 많은 비율의 변화가 생긴쪽으로 비율을 자동조정한다.
+						double aspect = resizeStartWidth_ / resizeStartHeight_;
+						if (imageForceWidth)
+						{
+							Height = Math.Max(1, Width / aspect);
+						}
+						else 
+						{
+							Width = Math.Max(1, Height * aspect);
+						}
+
+						resizeStartWidth_ = -1;
+						resizeStartHeight_ = -1;
+					}
+
+					isResizing_ = false;
+				}
+				return IntPtr.Zero;
+			}
 			return IntPtr.Zero;
 		}
 
@@ -99,7 +175,7 @@ namespace ImageViewer
 				bmp.EndInit();
 
 				DisplayedImage.Source = bmp;
-				Bitmap = bmp;
+				bitmap_ = bmp;
 
 				// 이미지 로드 후 윈도우 크기를 이미지 비율에 맞춤 (최초 1회)
 				AdjustWindowToImage(bmp);
@@ -148,11 +224,11 @@ namespace ImageViewer
 				double imgAspect = width / height;
 
 				// Available area on the selected screen from current position
-				double leftOnScreen = Left - Screen.Bounds.Left;
-				double topOnScreen = Top - Screen.Bounds.Top;
+				double leftOnScreen = Left - screen_.Bounds.Left;
+				double topOnScreen = Top - screen_.Bounds.Top;
 
-				double maxWidthOnScreen = Math.Max(0, Screen.Bounds.Width - leftOnScreen);
-				double maxHeightOnScreen = Math.Max(0, Screen.Bounds.Height - topOnScreen);
+				double maxWidthOnScreen = Math.Max(0, screen_.Bounds.Width - leftOnScreen);
+				double maxHeightOnScreen = Math.Max(0, screen_.Bounds.Height - topOnScreen);
 
 				// Desired size starts from image pixel size
 				double desiredWidth = bmp.PixelWidth;
@@ -185,17 +261,17 @@ namespace ImageViewer
 			}
 			else
 			{
-				if (width >= Screen.Bounds.Width)
+				if (width >= screen_.Bounds.Width)
 				{
 					double aspect = width / height;
-					width = Screen.Bounds.Width;
+					width = screen_.Bounds.Width;
 					height = width / aspect;
 				}
 
-				if (height >= Screen.Bounds.Height)
+				if (height >= screen_.Bounds.Height)
 				{
 					double aspect = width / height;
-					height = Screen.Bounds.Height;
+					height = screen_.Bounds.Height;
 					width = height * aspect;
 				}
 
@@ -232,12 +308,16 @@ namespace ImageViewer
 		private string GetClipboardCommandLineArg()
 		{
 			int screenIndex = -1;
+			int x = 0;
+			int y = 0;
 			for (int i = 0; i < Form.Screen.AllScreens.Length; i++)
 			{
 				var scr = Form.Screen.AllScreens[i];
 				if (scr.Bounds.Contains((int)Left, (int)Top))
 				{
 					screenIndex = i;
+					x = (int)(Left - scr.Bounds.Left);
+					y = (int)(Top - scr.Bounds.Top);
 					break;
 				}
 			}
@@ -251,8 +331,8 @@ namespace ImageViewer
 				$"\'" +
 				$"path={imagePath_}," +
 				$"screen={screenIndex}," +
-				$"x={(int)Left}," +
-				$"y={(int)Top}," +
+				$"x={x}," +
+				$"y={y}," +
 				$"width={(int)Width}," +
 				$"height={(int)Height}," +
 				$"fit={(fitToScreenWidth_ ? 1 : 0)}," +
@@ -264,6 +344,12 @@ namespace ImageViewer
 
 		private void SaveArgClipboardSingle(object sender, RoutedEventArgs e)
 		{
+			if (!IsImageLoaded)
+			{
+				MessageBox.Show("이미지가 로드되지 않았습니다.");
+				return;
+			}
+
 			string arg = GetClipboardCommandLineArg();
 			Clipboard.SetText(arg);
 			MessageBox.Show("클립보드에 내용이 복사되었습니다:\n" + arg);
@@ -275,7 +361,7 @@ namespace ImageViewer
 			bool isFirst = true;
 			foreach (var wnd in Application.Current.Windows)
 			{
-				if (wnd is MainWindow mw)
+				if (wnd is MainWindow mw && mw.IsImageLoaded)
 				{
 					if (!isFirst)
 					{
@@ -287,6 +373,13 @@ namespace ImageViewer
 					isFirst = false;
 				}
 			}
+
+			if (isFirst)
+			{
+				MessageBox.Show("로드된 이미지가 없습니다.");
+				return;
+			}
+
 			string args = sb.ToString();
 			Clipboard.SetText(args);
 			MessageBox.Show($"모든 창의 명령줄 인수가 클립보드에 복사되었습니다:\n{args}");
@@ -295,8 +388,76 @@ namespace ImageViewer
 		private void Go_Topmost(object sender, RoutedEventArgs e)
 		{
 			Topmost = !Topmost;
+		}
 
+		private void DropImageFile(object sender, DragEventArgs e)
+		{
+			if (e.Data.GetDataPresent(DataFormats.FileDrop))
+			{
+				List<string> files = ((string[])e.Data.GetData(DataFormats.FileDrop)).ToList();
+				string dropIamgeFile = files.FirstOrDefault(_x =>
+				{
+					string ext = Path.GetExtension(_x);
+					if (string.IsNullOrWhiteSpace(ext))
+						return false;
+
+					switch (ext)
+					{
+					case ".jpg":
+					case ".png":
+					case ".bmp":
+					case ".tiff":
+					case ".webp":
+					case ".gif":
+					case ".ico":
+						return true;
+					}
+					return false;
+				});
+
+				if (string.IsNullOrEmpty(dropIamgeFile))
+				{
+					MessageBox.Show("드롭된 파일 중 이미지 파일이 없습니다.");
+					return;
+				}
+
+				int defaultScreenIdx = GetDefaultScreenIndex();
+
+				if (IsImageLoaded)
+				{
+					new MainWindow(
+						dropIamgeFile,
+						defaultScreenIdx,
+						0,
+						0,
+						fitToScreenWidth_,
+						-1,
+						-1,
+						Topmost).Show();
+				}
+				else
+				{
+					Load(dropIamgeFile, defaultScreenIdx, 0, 0, false, -1, -1, false);
+				}
+			}
+		}
+
+		private int GetDefaultScreenIndex()
+		{
+			for (int i = 0; i < Form.Screen.AllScreens.Length; i++)
+			{
+				var scr = Form.Screen.AllScreens[i];
+				if (scr.Bounds.Contains(0, 0))
+				{
+					return i;
+				}
+			}
+			return 0; // 못찾으면 그냥 0
+		}
+
+		private void Go_AutoResizing(object sender, RoutedEventArgs e)
+		{
+			adjustAutoResizing_ = !adjustAutoResizing_;
 		}
 	}
-
 }
